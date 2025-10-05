@@ -86,6 +86,7 @@ const UberChargeApp = () => {
 
   const recommendedStation = useMemo(
       () => chargingStations.find((s) => s.recommended) || chargingStations[0],
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       []
   );
   const recommendedPoints = costToPoints(recommendedStation?.estimatedCost);
@@ -228,42 +229,176 @@ const UberChargeApp = () => {
       </div>
   );
 
-  // ---------------- Charge+ Info View (from ad) ----------------
-  const ChargePlusView = () => (
-      <div className="relative h-full bg-white">
-        <div className="sticky top-0 left-0 right-0 z-50 pt-2 pb-3 px-4 bg-white">
-          <div className="flex items-center justify-between text-black text-sm font-medium">
-            <button className="flex items-center gap-2 -ml-1 p-1" onClick={() => setView('settings')} aria-label="Back">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <span className="font-semibold">Uber Charge+</span>
-            <span className="w-5" />
-          </div>
-        </div>
+  // ---------------- Simple IntersectionObserver-based reveal helper ----------------
+  const Reveal = ({ children, delay = 0, className = "" }) => {
+    const ref = React.useRef(null);
+    const [show, setShow] = useState(false);
 
-        <div className="px-5 pt-4 pb-8 space-y-4">
-          <div className="rounded-2xl border border-neutral-200 p-5 bg-neutral-50">
-            <div className="flex items-center gap-2 text-xl font-bold">
-              <Zap className="w-5 h-5 text-black" />
-              Charge+ for Drivers
+    React.useEffect(() => {
+      const obs = new IntersectionObserver(
+          ([entry]) => entry.isIntersecting && setShow(true),
+          { threshold: 0.2 }
+      );
+      if (ref.current) obs.observe(ref.current);
+      return () => obs.disconnect();
+    }, []);
+
+    return (
+        <div
+            ref={ref}
+            style={{ transitionDelay: `${delay}ms` }}
+            className={[
+              "transform transition-all duration-700 ease-out will-change-transform",
+              show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
+              className
+            ].join(" ")}
+        >
+          {children}
+        </div>
+    );
+  };
+
+  // ---------------- Charge+ Info View (Apple-style Story / Feature Reveal) ----------------
+  const ChargePlusView = () => {
+    const features = [
+      {
+        id: "save",
+        icon: <Wallet className="w-6 h-6" />,
+        title: "Save more per charge",
+        copy: "Automatically steered to cheaper stations and off-peak prices.",
+      },
+      {
+        id: "time",
+        icon: <Clock className="w-6 h-6" />,
+        title: "More ride time, less downtime",
+        copy: "Smart routing avoids queues and unnecessary detours.",
+      },
+      {
+        id: "onetap",
+        icon: <Zap className="w-6 h-6" />,
+        title: "One-tap charging & payment",
+        copy: "Integrated directly inside the Uber Driver app — no extra logins or cards.",
+      },
+      {
+        id: "rewards",
+        icon: <Star className="w-6 h-6" />,
+        title: "Earn while you charge",
+        copy: "Collect reward points for off-peak or renewable charging, auto-credited after each session.",
+      },
+      {
+        id: "reliable",
+        icon: <MapPin className="w-6 h-6" />,
+        title: "Guaranteed reliability",
+        copy: "Real-time data ensures chargers are available, functional, and reservable.",
+      },
+    ];
+
+    return (
+        <div className="relative min-h-screen bg-black text-white pb-24">
+          {/* Top bar */}
+          <div className="sticky top-0 left-0 right-0 z-50 bg-black/70 backdrop-blur-md pt-2 pb-3 px-4">
+            <div className="flex items-center justify-between text-sm">
+              <button
+                  className="flex items-center gap-2 -ml-1 p-1 rounded-full hover:bg-white/5"
+                  onClick={() => setView('settings')}
+                  aria-label="Back"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <span className="font-semibold">Uber Charge+</span>
+              <span className="w-5" />
             </div>
-            <ul className="mt-3 list-disc pl-5 text-[15px] text-neutral-800 space-y-1.5">
-              <li>Cheaper sessions via in-app pricing and rewards.</li>
-              <li>Faster routing to available chargers—no guessing.</li>
-              <li>Certainty with reservations and transparent receipts.</li>
-              <li>Points auto-credited to your wallet after each session.</li>
-            </ul>
           </div>
 
-          <button
-              className="w-full rounded-xl bg-black text-white py-3 font-semibold"
-              onClick={() => setView('map')}
-          >
-            Try it on the map
-          </button>
+          {/* Hero */}
+          <section className="relative overflow-hidden">
+            {/* Subtle energy gradient */}
+            <div className="absolute inset-0 -z-10 bg-[radial-gradient(100%_60%_at_50%_0%,#1e293b_0%,#0b0b0b_45%,#000_100%)]" />
+            <div className="px-5 pt-10 pb-14">
+              <Reveal>
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs tracking-wide">
+                  <Zap className="w-4 h-4" />
+                  BUILT INTO THE UBER DRIVER APP
+                </div>
+              </Reveal>
+
+              <Reveal delay={80}>
+                <h1 className="mt-4 text-4xl font-extrabold leading-tight tracking-tight">
+                  Charge smarter.{" "}
+                  <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
+    Drive longer.
+  </span>{" "}
+                  Earn more.
+                </h1>
+
+              </Reveal>
+
+              <Reveal delay={160}>
+                <p className="mt-3 text-base text-white/70">
+                  Uber Charge+ is the intelligent charging experience — optimized pricing,
+                  real-time availability, and rewards. All without leaving Uber.
+                </p>
+              </Reveal>
+
+              <Reveal delay={240}>
+                <button
+                    onClick={() => setView('map')}
+                    className="mt-6 inline-flex items-center justify-center rounded-xl bg-white text-black font-semibold px-5 py-3 active:scale-[0.99]"
+                >
+                  Try it on the map
+                </button>
+              </Reveal>
+            </div>
+          </section>
+
+          {/* Feature Reveal */}
+          <section className="px-5 pb-8">
+            <div className="space-y-10">
+              {features.map((f, idx) => (
+                  <Reveal key={f.id} delay={idx * 60}>
+                    <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
+                      <div className="flex items-center gap-3 text-white">
+                        <div className="rounded-xl bg-white/10 p-2">{f.icon}</div>
+                        <h3 className="text-xl font-bold">{f.title}</h3>
+                      </div>
+                      <p className="mt-2 text-[15px] text-white/70">{f.copy}</p>
+                    </div>
+                  </Reveal>
+              ))}
+            </div>
+          </section>
+
+          {/* Closing CTA */}
+          <section className="px-5 pb-10">
+            <Reveal>
+              <div className="relative rounded-3xl overflow-hidden">
+                <div className="absolute inset-0 -z-10 bg-[conic-gradient(from_120deg_at_50%_50%,#0ea5e9,transparent_30%,#22c55e_60%,transparent_75%)] opacity-30 blur-2xl" />
+                <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md p-6">
+                  <h4 className="text-2xl font-extrabold">Charge+ for Drivers</h4>
+                  <p className="mt-1 text-white/70">
+                    Built into Uber. Designed for you.
+                  </p>
+                  <div className="mt-4 flex gap-3">
+                    <button
+                        onClick={() => setView('map')}
+                        className="rounded-xl bg-white text-black font-semibold px-5 py-3"
+                    >
+                      Try it on the map
+                    </button>
+                    <button
+                        onClick={() => setView('wallet')}
+                        className="rounded-xl border border-white/20 text-white px-5 py-3"
+                    >
+                      View rewards
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+          </section>
         </div>
-      </div>
-  );
+    );
+  };
 
   // ---------------- Settings View ----------------
   const SettingsTile = ({ icon: Icon, label, onClick }) => (
@@ -328,7 +463,6 @@ const UberChargeApp = () => {
             </div>
           </div>
 
-
           {/* Tiles row */}
           <div className="flex items-center gap-3 mb-5">
             <SettingsTile icon={LifeBuoy} label="Help" onClick={() => {}} />
@@ -339,19 +473,29 @@ const UberChargeApp = () => {
           {/* Charge+ Ad Card (clickable) */}
           <button
               onClick={() => setView('chargeplus')}
-              className="w-full text-left rounded-2xl bg-neutral-100 p-4 mb-5 flex items-center justify-between active:scale-[0.99]"
+              className="relative w-full text-left rounded-2xl p-4 mb-5 flex items-center justify-between
+             overflow-hidden active:scale-[0.99] transition-transform duration-150
+             bg-gradient-to-r from-green-50 via-emerald-50 to-white
+             shadow-[0_4px_20px_-4px_rgba(16,185,129,0.25)]"
           >
-            <div>
-              <div className="text-[17px] font-semibold text-neutral-900">Uber Charge+</div>
-              <div className="text-neutral-600 mt-1">
+            {/* Subtle glowing background */}
+            <div className="absolute inset-0 bg-gradient-to-r from-green-300/30 via-emerald-200/20 to-transparent blur-2xl opacity-60" />
+
+            <div className="relative z-10">
+              <div className="text-[17px] font-extrabold bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent">
+                Uber Charge+
+              </div>
+              <div className="text-neutral-700 mt-1 font-medium">
                 Earn rewards and charge faster with in-app reservations.
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-black" />
+
+            <div className="relative z-10 flex items-center gap-2">
+              <Sparkles className="w-6 h-6 text-emerald-600" />
               <ChevronRight className="w-5 h-5 text-neutral-400" />
             </div>
           </button>
+
 
           {/* List section */}
           <div className="rounded-2xl overflow-hidden border border-neutral-200">
@@ -370,10 +514,7 @@ const UberChargeApp = () => {
             />
           </div>
 
-          {/* (Intentionally leaving out "Uber for Teens") */}
-          <div className="mt-6 text-sm text-neutral-600 px-1">
-            Family — manage accounts for riders you travel with.
-          </div>
+
         </div>
       </div>
   );
@@ -608,7 +749,13 @@ const UberChargeApp = () => {
   );
 
   return (
-      <div className="max-w-sm mx-auto bg-gray-100 h-screen relative overflow-hidden">
+      <div
+          className={`max-w-sm mx-auto h-screen relative ${
+              view === 'chargeplus'
+                  ? 'overflow-y-auto bg-black' // scrollable dark page
+                  : 'overflow-hidden bg-gray-100' // normal pages (map, wallet, etc.)
+          }`}
+      >
         {view === 'map' && <MapView />}
         {view === 'wallet' && <WalletView />}
         {view === 'settings' && <SettingsView />}
